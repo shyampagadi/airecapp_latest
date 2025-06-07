@@ -67,8 +67,7 @@ export const API_GATEWAY = {
   opensearchGatewayUrl: process.env.REACT_APP_OPENSEARCH_GATEWAY_API_URL,
   opensearchRestApiKey: process.env.REACT_APP_OPENSEARCH_REST_API_KEY,
   jdSearchEndpoint: 'https://p1w63vjfu7.execute-api.us-east-1.amazonaws.com/dev/resumes',
-  postgresEndpoint: 'https://p1w63vjfu7.execute-api.us-east-1.amazonaws.com/dev/postgres-data',
-};
+ };
 
 // Resume File Extensions
 export const RESUME_FILE_EXTENSIONS = (process.env.REACT_APP_RESUME_FILE_EXTENSIONS || 'pdf,docx,doc,txt').split(',');
