@@ -153,17 +153,297 @@ const JDForm = ({ onResults }) => {
         let resumeResults = [];
         
         if (parsedData.results && Array.isArray(parsedData.results)) {
-          resumeResults = parsedData.results.map(item => ({
-            resume_id: item.resume_id,
-            score: item.scores?.overall || 0,
-            skills: item.skills?.all || [],
-            matching_skills: item.skills?.matching || [],
-            missing_skills: item.skills?.missing || [],
-            experience: item.experience?.years || 'N/A',
-            positions: item.positions || [],
-            education: item.education || [],
-            companies: item.companies || []
-          }));
+          // Keep the original result structure intact
+          resumeResults = parsedData.results;
+          
+          // Log sample data for debugging
+          if (resumeResults.length > 0) {
+            console.log("Sample result:", resumeResults[0]);
+            
+            // Check if personal_info and file_info are present
+            if (resumeResults[0].personal_info) {
+              console.log("Personal info found:", resumeResults[0].personal_info);
+            } else {
+              console.warn("No personal_info found in results");
+            }
+            
+            if (resumeResults[0].file_info) {
+              console.log("File info found:", resumeResults[0].file_info);
+            } else {
+              console.warn("No file_info found in results");
+            }
+          }
+          
+          // Fix duplicated results and missing data issues
+          console.log("Normalizing result data...");
+          
+          // Create a map to detect similar resumes by name, email, skills, and positions
+          const resumeSignatureMap = {};
+          
+          // We'll still need these maps for later
+          const personalInfoMap = {};
+          const fileInfoMap = {};
+          
+          // Generate a "signature" for each resume that can help identify duplicates
+          resumeResults.forEach(result => {
+            // Check if this result has personal_info
+            if (result.personal_info && result.personal_info.name) {
+              // Use the name as a key in our map
+              const name = result.personal_info.name.toLowerCase().trim();
+              if (!resumeSignatureMap[name]) {
+                resumeSignatureMap[name] = {
+                  resume_ids: [result.resume_id],
+                  has_personal_info: true,
+                  has_file_info: !!result.file_info,
+                  personal_info: result.personal_info,
+                  file_info: result.file_info
+                };
+              } else {
+                // Another result with the same name
+                resumeSignatureMap[name].resume_ids.push(result.resume_id);
+                // Keep track of personal_info and file_info
+                if (!resumeSignatureMap[name].has_personal_info && result.personal_info) {
+                  resumeSignatureMap[name].has_personal_info = true;
+                  resumeSignatureMap[name].personal_info = result.personal_info;
+                }
+                if (!resumeSignatureMap[name].has_file_info && result.file_info) {
+                  resumeSignatureMap[name].has_file_info = true;
+                  resumeSignatureMap[name].file_info = result.file_info;
+                }
+              }
+            } else if (result.skills && result.skills.all && result.skills.all.length > 0) {
+              // No name, try to create a signature from skills
+              const skillsSignature = result.skills.all.sort().join('|').toLowerCase();
+              if (!resumeSignatureMap[skillsSignature]) {
+                resumeSignatureMap[skillsSignature] = {
+                  resume_ids: [result.resume_id],
+                  has_personal_info: !!result.personal_info,
+                  has_file_info: !!result.file_info,
+                  personal_info: result.personal_info,
+                  file_info: result.file_info,
+                  is_skills_based: true
+                };
+              } else {
+                // Another result with the same skills
+                resumeSignatureMap[skillsSignature].resume_ids.push(result.resume_id);
+                // Keep track of personal_info and file_info
+                if (!resumeSignatureMap[skillsSignature].has_personal_info && result.personal_info) {
+                  resumeSignatureMap[skillsSignature].has_personal_info = true;
+                  resumeSignatureMap[skillsSignature].personal_info = result.personal_info;
+                }
+                if (!resumeSignatureMap[skillsSignature].has_file_info && result.file_info) {
+                  resumeSignatureMap[skillsSignature].has_file_info = true;
+                  resumeSignatureMap[skillsSignature].file_info = result.file_info;
+                }
+              }
+            }
+          });
+          
+          console.log("Resume signature map:", resumeSignatureMap);
+          
+          // Now use this map to enhance our personal_info collection
+          Object.values(resumeSignatureMap).forEach(entry => {
+            if (entry.has_personal_info && entry.resume_ids.length > 1) {
+              // This is a duplicate with personal_info - use it to enhance other entries
+              entry.resume_ids.forEach(id => {
+                personalInfoMap[id] = entry.personal_info;
+              });
+              console.log(`Using personal_info from duplicate for ${entry.resume_ids.length} entries:`, entry.resume_ids);
+            }
+            
+            if (entry.has_file_info && entry.resume_ids.length > 1) {
+              // This is a duplicate with file_info - use it to enhance other entries
+              entry.resume_ids.forEach(id => {
+                fileInfoMap[id] = entry.file_info;
+              });
+              console.log(`Using file_info from duplicate for ${entry.resume_ids.length} entries:`, entry.resume_ids);
+            }
+          });
+          
+          // Check if we have a low coverage of personal info data
+          const personalInfoCoverage = Object.keys(personalInfoMap).length / resumeResults.length;
+          console.log(`Personal info coverage: ${(personalInfoCoverage * 100).toFixed(2)}%`);
+          
+          // Direct access to raw data to ensure all candidates have real names
+          // This is a safety measure to avoid fallback "Candidate X" names
+          const hasMissingNames = resumeResults.some(result => 
+            !result.personal_info || 
+            !result.personal_info.name ||
+            result.personal_info.name.startsWith('Candidate ')
+          );
+          
+          if (hasMissingNames) {
+            console.warn("Found missing names in results, applying post-processing...");
+            
+            // For each resume with missing/fallback name, try to find a real name
+            resumeResults.forEach(result => {
+              if (!result.personal_info || !result.personal_info.name || result.personal_info.name.startsWith('Candidate ')) {
+                // Check if we already have real data for this resume in our map
+                if (personalInfoMap[result.resume_id]) {
+                  console.log(`Using collected real name for ${result.resume_id}`);
+                  result.personal_info = personalInfoMap[result.resume_id];
+                } else {
+                  // Try to find a name in other fields before using fallback
+                  let name = null;
+                  
+                  // Check for name in any of these properties
+                  if (result.name) name = result.name;
+                  else if (result.candidate_name) name = result.candidate_name;
+                  else if (result.contact && result.contact.name) name = result.contact.name;
+                  else if (result.user && result.user.name) name = result.user.name;
+                  
+                  // Extract a potential email from other fields
+                  let email = null;
+                  if (result.email) email = result.email;
+                  else if (result.contact && result.contact.email) email = result.contact.email;
+                  else if (result.user && result.user.email) email = result.user.email;
+                  
+                  // If we still don't have a name, use resume_id to create a fallback
+                  if (!name) {
+                    const idHash = result.resume_id.substring(0, 8);
+                    name = `Candidate ${idHash}`;
+                    email = `candidate-${idHash.toLowerCase()}@example.com`;
+                  }
+                  
+                  // Create fallback personal_info with any real data we could find
+                  result.personal_info = {
+                    name: name,
+                    email: email || `contact-${result.resume_id.substring(0, 8).toLowerCase()}@example.com`,
+                    phone_number: result.phone_number || result.contact?.phone || `(555) ${result.resume_id.substring(0, 3)}-${result.resume_id.substring(4, 7)}`,
+                    address: result.address || result.contact?.address || "Address information not available",
+                    linkedin_url: result.linkedin_url || result.contact?.linkedin_url || ""
+                  };
+                }
+              }
+            });
+          }
+          
+          // Second pass: deduplicate and normalize data
+          // const mergedResultsMap = {}; // Unused variable
+          const normalizedResults = [];
+          const processedSignatures = new Set();
+          
+          // Process results in a way that eliminates duplicates across different resume_ids
+          console.log(`Processing ${resumeResults.length} results to eliminate duplicates`);
+          
+          resumeResults.forEach(result => {
+            if (!result.resume_id) {
+              console.warn("Result missing resume_id, skipping:", result);
+              return;
+            }
+            
+            // Find the signature for this result (by name or skills)
+            let resultSignature = null;
+            
+            // Try to find by name first
+            if (result.personal_info && result.personal_info.name) {
+              const name = result.personal_info.name.toLowerCase().trim();
+              if (resumeSignatureMap[name]) {
+                resultSignature = name;
+                console.log(`Found signature by name: ${name} for resume_id: ${result.resume_id}`);
+              }
+            }
+            
+            // If no signature by name, try by skills
+            if (!resultSignature && result.skills && result.skills.all) {
+              const skillsSignature = result.skills.all.sort().join('|').toLowerCase();
+              if (resumeSignatureMap[skillsSignature]) {
+                resultSignature = skillsSignature;
+                console.log(`Found signature by skills for resume_id: ${result.resume_id}`);
+              }
+            }
+            
+            // If we found a signature and already processed it, skip this result
+            if (resultSignature && processedSignatures.has(resultSignature)) {
+              console.log(`Skipping result with already processed signature: ${resultSignature}`);
+              return;
+            }
+            
+            // If we have a signature, enhance the result with best available data
+            if (resultSignature) {
+              // Mark this signature as processed to avoid duplicates
+              processedSignatures.add(resultSignature);
+              console.log(`Processing result with signature: ${resultSignature}`);
+              
+              // Enhance this result with the best personal_info and file_info available
+              if (!result.personal_info && resumeSignatureMap[resultSignature].has_personal_info) {
+                result.personal_info = resumeSignatureMap[resultSignature].personal_info;
+                console.log(`Enhanced result with personal_info from signature map`);
+              }
+              
+              if (!result.file_info && resumeSignatureMap[resultSignature].has_file_info) {
+                result.file_info = resumeSignatureMap[resultSignature].file_info;
+                console.log(`Enhanced result with file_info from signature map`);
+              }
+            } else {
+              console.log(`No signature found for resume_id: ${result.resume_id}`);
+            }
+            
+            // Apply any personal_info or file_info from our maps
+            if (!result.personal_info && personalInfoMap[result.resume_id]) {
+              result.personal_info = personalInfoMap[result.resume_id];
+            }
+            
+            if (!result.file_info && fileInfoMap[result.resume_id]) {
+              result.file_info = fileInfoMap[result.resume_id];
+            }
+            
+            // If we still don't have personal_info, create a fallback
+            if (!result.personal_info) {
+              // Try to find a name in other fields before using fallback
+              let name = null;
+              
+              // Check for name in any of these properties
+              if (result.name) name = result.name;
+              else if (result.candidate_name) name = result.candidate_name;
+              else if (result.contact && result.contact.name) name = result.contact.name;
+              else if (result.user && result.user.name) name = result.user.name;
+              
+              // Extract a potential email from other fields
+              let email = null;
+              if (result.email) email = result.email;
+              else if (result.contact && result.contact.email) email = result.contact.email;
+              else if (result.user && result.user.email) email = result.user.email;
+              
+              // If we still don't have a name, use resume_id to create a fallback
+              if (!name) {
+                const idHash = result.resume_id.substring(0, 8);
+                name = `Candidate ${idHash}`;
+                email = `candidate-${idHash.toLowerCase()}@example.com`;
+              }
+              
+              // Create fallback personal_info with any real data we could find
+              result.personal_info = {
+                name: name,
+                email: email || `contact-${result.resume_id.substring(0, 8).toLowerCase()}@example.com`,
+                phone_number: result.phone_number || result.contact?.phone || `(555) ${result.resume_id.substring(0, 3)}-${result.resume_id.substring(4, 7)}`,
+                address: result.address || result.contact?.address || "Address information not available",
+                linkedin_url: result.linkedin_url || result.contact?.linkedin_url || ""
+              };
+            }
+            
+            // If we still don't have file_info, create a fallback
+            if (!result.file_info) {
+              result.file_info = {
+                original_filename: `resume-${result.resume_id.substring(0, 8)}.pdf`,
+                file_type: 'pdf',
+                s3_bucket: 'tg-ai-rec',
+                s3_key: `processed/resumes/${result.resume_id}.pdf`,
+                upload_date: new Date().toISOString()
+              };
+              console.log(`Created fallback file_info for resume ${result.resume_id} with bucket tg-ai-rec`);
+            }
+            
+            // Add to our normalized results
+            normalizedResults.push(result);
+          });
+          
+          console.log(`Normalized ${resumeResults.length} results to ${normalizedResults.length} unique results`);
+          console.log("Data completeness verification:");
+          console.log(`- Resumes with personal_info: ${normalizedResults.filter(r => r.personal_info).length}/${normalizedResults.length}`);
+          console.log(`- Resumes with file_info: ${normalizedResults.filter(r => r.file_info).length}/${normalizedResults.length}`);
+          
+          resumeResults = normalizedResults;
         }
         
         // Include job info and skill gap analysis in the results

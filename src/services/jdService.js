@@ -5,29 +5,34 @@ import { API_GATEWAY } from '../config/appConfig';
 // Get API Gateway URL from config
 const API_GATEWAY_URL = API_GATEWAY.jdSearchEndpoint;
 
+/**
+ * Submit a job description to get matching resumes
+ * 
+ * @param {string} jobDescriptionData - HTML content of the job description
+ * @param {Object} filters - Optional filters for the search
+ * @returns {Promise<Object>} Results data or error
+ */
 export const submitJobDescription = async (jobDescriptionData, filters = {}) => {
   try {
-    // Extract text content from HTML for API request
-    const textContent = jobDescriptionData.replace(/<[^>]*>/g, ' ').trim();
-    console.log('jdService: Extracted text content from HTML');
-
-    // Process filters
-    const {
-      skills = [],
-      min_experience,
-      max_experience,
+    console.log('jdService: Submitting job description');
+    
+    // Extract plain text content from HTML job description
+    const tempDiv = document.createElement('div');
+    tempDiv.innerHTML = jobDescriptionData;
+    const textContent = tempDiv.textContent || tempDiv.innerText || '';
+    
+    // Extract filter parameters
+    const { 
+      skills = [], 
+      min_experience, 
+      max_experience, 
       min_score,
       location,
       education_level
     } = filters;
-
-    // Try using Amplify API for authenticated calls first
+    
     try {
-      console.log('jdService: Using Amplify API for authenticated call');
-      
-      // Get the current session to verify we're authenticated
-      const session = await Auth.currentSession();
-      const token = session.getIdToken().getJwtToken();
+      console.log('jdService: Trying API Gateway call via Amplify');
       
       // Prepare query parameters
       const queryParams = {

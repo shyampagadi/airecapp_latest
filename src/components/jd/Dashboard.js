@@ -10,25 +10,12 @@ import {
   Container, 
   CircularProgress, 
   Avatar,
-  Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
-  TableRow,
-  IconButton,
   Tabs,
-  Tab,
-  Stack,
-  Chip,
-  LinearProgress
+  Tab
 } from '@mui/material';
 import { 
   ArrowUpward, 
   ArrowDownward,
-  GetApp as DownloadIcon,
-  Email as EmailIcon,
-  Visibility as ViewIcon,
   Check as CheckIcon,
   PeopleAlt as PeopleIcon,
   WorkOutline as WorkIcon,
@@ -51,7 +38,9 @@ const Dashboard = () => {
   const [mainTabValue, setMainTabValue] = useState(0);
   const [searchTabValue, setSearchTabValue] = useState(0);
   const [viewerOpen, setViewerOpen] = useState(false);
+  // eslint-disable-next-line no-unused-vars
   const [selectedResumeId, setSelectedResumeId] = useState(null);
+  const [/* error */, /* setError */] = useState('');
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -101,10 +90,11 @@ const Dashboard = () => {
     setSearchTabValue(newValue);
   };
 
-  const handleViewResume = (resumeId) => {
-    setSelectedResumeId(resumeId);
-    setViewerOpen(true);
-  };
+  // Commented out as it's not being used
+  // const handleViewResume = (resumeId) => {
+  //   setSelectedResumeId(resumeId);
+  //   setViewerOpen(true);
+  // };
 
   if (isLoading) {
     return (
