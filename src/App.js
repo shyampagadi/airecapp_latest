@@ -10,6 +10,7 @@ import Login from './components/auth/Login';
 import Dashboard from './components/jd/Dashboard';
 import ProtectedRoute from './components/auth/ProtectedRoute';
 import ApiTest from './ApiTest';
+import LangchainBedrockExample from './components/jd/LangchainBedrockExample';
 
 // Custom theme
 import theme from './theme';
@@ -114,6 +115,16 @@ function App() {
                   <Header />
                   <main className="main-content">
                     <Dashboard />
+                  </main>
+                </div>
+              } />
+              
+              {/* New LangChain Example Route */}
+              <Route path="/langchain-example" element={
+                <div className="app-container">
+                  <Header />
+                  <main className="main-content">
+                    <LangchainBedrockExample />
                   </main>
                 </div>
               } />

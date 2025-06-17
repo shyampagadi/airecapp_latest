@@ -139,6 +139,14 @@ const Header = () => {
             <ListItemText primary="Job Descriptions" />
           </ListItemButton>
         </ListItem>
+        <ListItem disablePadding>
+          <ListItemButton component={Link} to="/langchain-example">
+            <ListItemIcon>
+              <SearchIcon />
+            </ListItemIcon>
+            <ListItemText primary="LangChain Demo" />
+          </ListItemButton>
+        </ListItem>
       </List>
     </Box>
   );
@@ -190,6 +198,13 @@ const Header = () => {
                 sx={{ my: 2, color: 'inherit', display: 'block' }}
               >
                 Job Descriptions
+              </Button>
+              <Button
+                component={Link}
+                to="/langchain-example"
+                sx={{ my: 2, color: 'inherit', display: 'block' }}
+              >
+                LangChain Demo
               </Button>
             </Box>
           )}

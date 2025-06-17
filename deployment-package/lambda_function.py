@@ -962,9 +962,9 @@ def create_db_connection():
             cursor.fetchone()
             cursor.close()
             
-            return conn
+        return conn
             
-        except Exception as e:
+    except Exception as e:
             elapsed = time.time() - start_time
             logger.error(f"Database connection attempt {attempt+1} failed after {elapsed:.2f}s: {str(e)}")
             
@@ -1013,7 +1013,7 @@ def get_pii_data(resume_ids: List[str]) -> Dict[str, Dict[str, Any]]:
         if resume_ids and len(resume_ids) > 0:
             sample_ids = resume_ids[:min(5, len(resume_ids))]
             logger.info(f"Sample resume IDs being queried: {sample_ids}")
-        
+
         # Connect to database
         conn = create_db_connection()
         if not conn:
@@ -1051,7 +1051,7 @@ def get_pii_data(resume_ids: List[str]) -> Dict[str, Dict[str, Any]]:
             return {}
         finally:
             cursor.close()
-            conn.close()
+        conn.close()
 
         # Process results
         for row in rows:  # This is now safe because rows is always a list
@@ -1594,8 +1594,8 @@ def lambda_handler(event, context):
             if resume_matches is None:
                 logger.error("resume_matches is None, initializing to empty list")
                 resume_matches = []
-                
-        except Exception as e:
+
+    except Exception as e:
             logger.error(f"Error in search: {str(e)}")
             resume_matches = []  # Initialize to empty list on error
         

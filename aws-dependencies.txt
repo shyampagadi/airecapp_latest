@@ -1,0 +1,30 @@
+# AWS SDK dependencies to add to your package.json
+
+Please run the following command to install the required AWS SDK package:
+
+```bash
+npm install @aws-sdk/client-bedrock-runtime
+```
+
+Or add this to your package.json dependencies:
+
+```json
+"dependencies": {
+  ...existing dependencies...,
+  "@aws-sdk/client-bedrock-runtime": "^3.449.0"
+}
+```
+
+Then run `npm install` to install the new package.
+
+# Configuration Instructions
+
+1. Make sure your IAM role or user has permission to access Amazon Bedrock
+2. Update your environment variables to include:
+
+```
+REACT_APP_AWS_REGION=us-east-1
+REACT_APP_BEDROCK_MODEL_ID=meta.llama3-70b-instruct-v1:0
+```
+
+3. Ensure your AWS Amplify Auth configuration provides credentials with Bedrock permissions 

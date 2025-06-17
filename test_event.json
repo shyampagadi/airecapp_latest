@@ -1,0 +1,10 @@
+{
+  "body": "{\"candidateData\":{\"personal_info\":{\"name\":\"Alex Johnson\",\"email\":\"alex@example.com\",\"phone_number\":\"+1234567890\",\"address\":\"456 Tech Avenue, San Francisco, CA\",\"linkedin_url\":\"https://linkedin.com/in/alexjohnson\"},\"skills\":{\"matching\":[\"Python\",\"React\",\"AWS Lambda\"],\"missing\":[\"Docker\",\"Kubernetes\"],\"all\":[\"Python\",\"JavaScript\",\"React\",\"Node.js\",\"AWS Lambda\",\"GraphQL\",\"MongoDB\",\"PostgreSQL\"]},\"experience\":{\"years\":4,\"required\":5,\"difference\":-1},\"positions\":[\"Full Stack Developer\",\"Frontend Developer\",\"Junior Developer\"],\"education\":[{\"degree\":\"Bachelor of Science in Computer Engineering\",\"institution\":\"University of Technology\",\"year\":\"2019\"}],\"scores\":{\"overall\":78,\"skill_match\":80,\"experience_match\":75}},\"jobInfo\":{\"job_title\":\"Senior Full Stack Developer\",\"required_skills\":[\"Python\",\"React\",\"AWS Lambda\",\"Docker\",\"Kubernetes\"],\"required_experience\":5},\"modelId\":\"meta.llama3-70b-instruct-v1:0\",\"parameters\":{\"max_gen_len\":512,\"temperature\":0.5,\"top_p\":0.9}}",
+  "requestContext": {
+    "authorizer": {
+      "claims": {
+        "cognito:username": "testuser"
+      }
+    }
+  }
+} 
