@@ -32,5 +32,10 @@ module.exports = function override(config, env) {
     "assert": false
   };
 
+  config.watchOptions = {
+    ignored: /node_modules\/process\/browser\.js$/
+  };
+  
+
   return config;
 }; 

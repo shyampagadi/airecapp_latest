@@ -7,9 +7,9 @@ import axios from 'axios';
  */
 class BedrockApiService {
   constructor() {
-    // API Gateway endpoint URL (should be set in environment variables)
-    this.apiEndpoint = process.env.REACT_APP_API_GATEWAY_URL || 'https://your-api-gateway-url.com';
-    this.bedrockPath = process.env.REACT_APP_BEDROCK_API_PATH || '/bedrock';
+    // Use environment variables for API configuration
+    this.apiEndpoint = process.env.REACT_APP_API_GATEWAY_URL || 'http://localhost:3001';
+    this.bedrockPath = process.env.REACT_APP_BEDROCK_API_PATH || '/api/bedrock';
   }
 
   /**
@@ -24,9 +24,21 @@ class BedrockApiService {
     try {
       console.log(`BedrockApiService: Invoking model ${modelId}`);
       
-      // Get authentication token from the current session
-      const session = await Auth.currentSession();
-      const token = session.getIdToken().getJwtToken();
+      // For development, skip authentication
+      // In production, you should use proper authentication
+      let headers = {
+        'Content-Type': 'application/json'
+      };
+      
+      try {
+        // Try to get authentication token if available
+        const session = await Auth.currentSession();
+        const token = session.getIdToken().getJwtToken();
+        headers['Authorization'] = `Bearer ${token}`;
+      } catch (authError) {
+        console.warn('Using unauthenticated mode for development');
+        // Continue without authentication for development
+      }
       
       // Prepare the request body
       const requestBody = {
@@ -37,10 +49,7 @@ class BedrockApiService {
       
       // Make the API call
       const response = await axios.post(`${this.apiEndpoint}${this.bedrockPath}/invoke`, requestBody, {
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        }
+        headers: headers
       });
       
       // Check for successful response
@@ -81,8 +90,8 @@ class BedrockApiService {
       const session = await Auth.currentSession();
       const token = session.getIdToken().getJwtToken();
       
-      // Default model if not provided
-      const modelId = options.modelId || 'meta.llama3-70b-instruct-v1:0';
+      // Use environment variable for model ID
+      const modelId = options.modelId || process.env.REACT_APP_BEDROCK_MODEL_ID || 'meta.llama3-70b-instruct-v1:0';
       const parameters = options.parameters || {};
       
       // Prepare the API request body
@@ -140,7 +149,18 @@ class BedrockApiService {
    * @returns {Array} List of supported models with their details
    */
   getSupportedModels() {
+    // Default model from environment variable should be first in the list
+    const defaultModelId = process.env.REACT_APP_BEDROCK_MODEL_ID || 'meta.llama3-70b-instruct-v1:0';
+    
     return [
+      {
+        id: defaultModelId,
+        name: this._getModelDisplayName(defaultModelId),
+        provider: this._getModelProvider(defaultModelId),
+        description: 'Default model from environment configuration',
+        parameterFormat: this._getModelParameterFormat(defaultModelId),
+        defaultParameters: this._getDefaultParametersForModelId(defaultModelId)
+      },
       {
         id: 'meta.llama3-70b-instruct-v1:0',
         name: 'Llama 3 (70B)',
@@ -193,6 +213,75 @@ class BedrockApiService {
   }
   
   /**
+   * Helper method to get model display name
+   * @private
+   */
+  _getModelDisplayName(modelId) {
+    if (modelId.includes('llama3-70b')) return 'Llama 3 (70B)';
+    if (modelId.includes('llama3-8b')) return 'Llama 3 (8B)';
+    if (modelId.includes('claude-3-sonnet')) return 'Claude 3 Sonnet';
+    if (modelId.includes('titan-text-express')) return 'Titan Text Express';
+    return modelId.split('/').pop();
+  }
+  
+  /**
+   * Helper method to get model provider
+   * @private
+   */
+  _getModelProvider(modelId) {
+    if (modelId.includes('meta')) return 'Meta';
+    if (modelId.includes('anthropic')) return 'Anthropic';
+    if (modelId.includes('amazon') || modelId.includes('titan')) return 'Amazon';
+    return 'Unknown';
+  }
+  
+  /**
+   * Helper method to get model parameter format
+   * @private
+   */
+  _getModelParameterFormat(modelId) {
+    if (modelId.includes('llama')) return 'llama';
+    if (modelId.includes('claude')) return 'claude';
+    if (modelId.includes('titan')) return 'titan';
+    return 'default';
+  }
+  
+  /**
+   * Helper method to get default parameters for model ID
+   * @private
+   */
+  _getDefaultParametersForModelId(modelId) {
+    if (modelId.includes('llama')) {
+      return {
+        max_gen_len: 512,
+        temperature: 0.5,
+        top_p: 0.9
+      };
+    }
+    
+    if (modelId.includes('claude')) {
+      return {
+        max_tokens_to_sample: 1024,
+        temperature: 0.3,
+        top_p: 0.9
+      };
+    }
+    
+    if (modelId.includes('titan')) {
+      return {
+        maxTokenCount: 800,
+        temperature: 0.4,
+        topP: 0.9
+      };
+    }
+    
+    return {
+      temperature: 0.5,
+      top_p: 0.9
+    };
+  }
+  
+  /**
    * Get default parameters for a specific model
    * 
    * @param {String} modelId - The Bedrock model ID
@@ -207,4 +296,5 @@ class BedrockApiService {
   }
 }
 
-export default new BedrockApiService(); 
+const bedrockApiService = new BedrockApiService();
+export default bedrockApiService; 

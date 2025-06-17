@@ -36,6 +36,7 @@ const ModelSelector = ({
     if (!selectedModel && models.length > 0) {
       handleModelChange(models[0].id);
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
   
   // Handle model change

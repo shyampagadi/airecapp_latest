@@ -15,53 +15,41 @@ import {
   AccordionDetails
 } from '@mui/material';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
-import bedrockApiService from '../../services/bedrock-api-service';
-import ModelSelector from './ModelSelector';
+import langchainBedrockService from '../../services/langchainBedrockService';
 
 const CandidateAnalysisModal = ({ open, onClose, candidate, jobInfo }) => {
   const [analysis, setAnalysis] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
-  const [selectedModel, setSelectedModel] = useState('');
-  const [modelParameters, setModelParameters] = useState({});
-  const [showAdvanced, setShowAdvanced] = useState(false);
-
+  
+  // Reset state when modal opens with a new candidate
   useEffect(() => {
-    // Do nothing if modal is not open or no model selected
-    if (!open || !selectedModel || !candidate) return;
-    
-    // Analyze on model selection or parameter change
-    handleAnalyze();
-  }, [open, selectedModel, candidate]);
+    if (open && candidate) {
+      setAnalysis(null);
+      setError(null);
+    }
+  }, [open, candidate]);
   
   const handleAnalyze = async () => {
-    if (!selectedModel) {
-      setError("Please select a model first");
-      return;
-    }
-
     setLoading(true);
     setError(null);
     
     try {
-      // Use the candidateAnalysisService to analyze the candidate
-      const result = await bedrockApiService.analyzeCandidate(
+      // Use the environment variable for model ID
+      const result = await langchainBedrockService.analyzeCandidate(
         candidate, 
         jobInfo, 
-        {
-          modelId: selectedModel,
-          parameters: modelParameters
-        }
+        { modelId: process.env.REACT_APP_BEDROCK_MODEL_ID }
       );
       
       if (result.success) {
         setAnalysis(result.data);
       } else {
-        setError(result.message || 'Failed to analyze candidate profile');
+        setError(result.message || 'Analysis not available');
       }
     } catch (err) {
       console.error('Error in candidate analysis:', err);
-      setError(err.message || 'An unexpected error occurred');
+      setError('Analysis not available');
     } finally {
       setLoading(false);
     }
@@ -99,35 +87,19 @@ const CandidateAnalysisModal = ({ open, onClose, candidate, jobInfo }) => {
       </DialogTitle>
       
       <DialogContent dividers>
-        <Box sx={{ mb: 3 }}>
-          <Button 
-            variant="outlined" 
-            color="primary" 
-            onClick={() => setShowAdvanced(!showAdvanced)}
-            sx={{ mb: 2 }}
-          >
-            {showAdvanced ? 'Hide' : 'Show'} Advanced Options
-          </Button>
-          
-          {showAdvanced && (
-            <ModelSelector 
-              selectedModel={selectedModel}
-              setSelectedModel={setSelectedModel}
-              modelParameters={modelParameters}
-              setModelParameters={setModelParameters}
-            />
-          )}
-          
-          <Button 
-            variant="contained" 
-            color="primary" 
-            onClick={handleAnalyze} 
-            disabled={loading || !selectedModel}
-            fullWidth
-          >
-            {loading ? 'Analyzing...' : analysis ? 'Analyze Again' : 'Analyze Candidate'}
-          </Button>
-        </Box>
+        {!analysis && !loading && (
+          <Box sx={{ mb: 3 }}>
+            <Button 
+              variant="contained" 
+              color="primary" 
+              onClick={handleAnalyze} 
+              disabled={loading}
+              fullWidth
+            >
+              Analyze Candidate
+            </Button>
+          </Box>
+        )}
         
         {loading && (
           <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}>
@@ -167,7 +139,6 @@ const CandidateAnalysisModal = ({ open, onClose, candidate, jobInfo }) => {
                 </AccordionSummary>
                 <AccordionDetails>
                   <Typography variant="body2" component="div">
-                    <strong>Model:</strong> {analysis.metadata?.model || 'Not specified'}<br />
                     <strong>Processing Time:</strong> {analysis.metadata?.processing_time_ms || 0}ms<br />
                     <strong>Generated At:</strong> {new Date().toLocaleString()}
                   </Typography>
@@ -177,13 +148,7 @@ const CandidateAnalysisModal = ({ open, onClose, candidate, jobInfo }) => {
           </Box>
         )}
         
-        {!loading && !error && !analysis && !selectedModel && (
-          <Alert severity="info">
-            Please select a model to analyze this candidate.
-          </Alert>
-        )}
-        
-        {!loading && !error && !analysis && selectedModel && (
+        {!loading && !error && !analysis && (
           <Alert severity="info">
             Click "Analyze Candidate" to generate a professional analysis.
           </Alert>
@@ -191,6 +156,16 @@ const CandidateAnalysisModal = ({ open, onClose, candidate, jobInfo }) => {
       </DialogContent>
       
       <DialogActions>
+        {analysis && (
+          <Button 
+            onClick={handleAnalyze} 
+            color="primary" 
+            variant="outlined"
+            disabled={loading}
+          >
+            Analyze Again
+          </Button>
+        )}
         <Button onClick={onClose} color="primary">
           Close
         </Button>

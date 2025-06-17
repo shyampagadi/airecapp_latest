@@ -39,7 +39,7 @@ class LangchainBedrockService {
   async analyzeCandidate(candidate, jobInfo, options = {}) {
     try {
       // Get model parameters
-      const modelId = options.modelId || 'meta.llama3-70b-instruct-v1:0';
+      const modelId = options.modelId || process.env.REACT_APP_BEDROCK_DEFAULT_MODEL || process.env.REACT_APP_BEDROCK_MODEL_ID || 'meta.llama3-70b-instruct-v1:0';
       const parameters = this._getModelParameters(modelId, options.parameters);
       
       // Initialize Bedrock model
