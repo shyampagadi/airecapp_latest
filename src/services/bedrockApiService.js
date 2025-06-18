@@ -1,69 +1,22 @@
-import { Auth } from 'aws-amplify';
+/* eslint-disable import/no-anonymous-default-export */
+import { Auth, API } from 'aws-amplify';
 import axios from 'axios';
+import config from '../config';
+import { API_GATEWAY } from '../config/appConfig';
 
 /**
- * Service for AWS Bedrock analysis via API Gateway
- * This avoids browser compatibility issues by using an API Gateway endpoint
+ * Service for AWS Bedrock analysis via API Gateway Lambda
+ * This handles the candidate analysis through the Bedrock Lambda function
  */
 class BedrockApiService {
   constructor() {
     // API Gateway endpoint URL (should be set in environment variables)
-    this.apiEndpoint = process.env.REACT_APP_API_GATEWAY_URL || 'https://your-api-gateway-url.com';
-    this.bedrockPath = process.env.REACT_APP_BEDROCK_API_PATH || '/bedrock';
+    this.apiEndpoint = API_GATEWAY.bedrockAnalysisEndpoint || process.env.REACT_APP_BEDROCK_ANALYSIS_ENDPOINT || '';
+    this.analysisPath = ''; // Path is now included in the endpoint
   }
 
   /**
-   * Invoke a Bedrock model through API Gateway
-   *
-   * @param {string} modelId - The Bedrock model ID
-   * @param {string} prompt - The text prompt to send to the model  
-   * @param {Object} parameters - Model-specific parameters
-   * @returns {Promise<Object>} The model response
-   */
-  async invokeModel(modelId, prompt, parameters = {}) {
-    try {
-      console.log(`BedrockApiService: Invoking model ${modelId}`);
-      
-      // Get authentication token from the current session
-      const session = await Auth.currentSession();
-      const token = session.getIdToken().getJwtToken();
-      
-      // Prepare the request body
-      const requestBody = {
-        modelId,
-        prompt,
-        parameters
-      };
-      
-      // Make the API call
-      const response = await axios.post(`${this.apiEndpoint}${this.bedrockPath}/invoke`, requestBody, {
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        }
-      });
-      
-      // Check for successful response
-      if (response.status !== 200 || !response.data) {
-        throw new Error('Invalid response from API');
-      }
-      
-      return {
-        success: true,
-        content: response.data.text || response.data.generation || response.data.content || '',
-        rawResponse: response.data
-      };
-    } catch (error) {
-      console.error('Error invoking Bedrock model:', error);
-      return {
-        success: false,
-        error: error.message || 'Failed to invoke model',
-      };
-    }
-  }
-  
-  /**
-   * Analyze a candidate profile against job requirements
+   * Analyze a candidate profile against job requirements using Lambda function
    * 
    * @param {Object} candidate - The candidate profile data
    * @param {Object} jobInfo - The job requirements data
@@ -74,59 +27,155 @@ class BedrockApiService {
    */
   async analyzeCandidate(candidate, jobInfo, options = {}) {
     try {
-      console.log('BedrockApiService: Analyzing candidate profile');
-      const startTime = Date.now();
+      console.log('BedrockApiService: Analyzing candidate via API Gateway');
+      console.log('BedrockApiService: API Endpoint:', this.apiEndpoint);
       
-      // Get authentication token from the current session
-      const session = await Auth.currentSession();
-      const token = session.getIdToken().getJwtToken();
-      
-      // Default model if not provided
-      const modelId = options.modelId || 'meta.llama3-70b-instruct-v1:0';
-      const parameters = options.parameters || {};
-      
-      // Prepare the API request body
-      const requestBody = {
-        modelId,
-        candidate,
-        jobInfo,
-        parameters
-      };
-      
-      // Make the direct API call to the analysis endpoint
-      const bedrockStartTime = Date.now();
-      const response = await axios.post(`${this.apiEndpoint}${this.bedrockPath}/analyze`, requestBody, {
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        }
-      });
-      const bedrockEndTime = Date.now();
-      
-      if (response.status !== 200 || !response.data || !response.data.success) {
-        throw new Error(response.data?.message || 'Failed to analyze candidate profile');
-      }
-      
-      // Calculate processing times
-      const endTime = Date.now();
-      const totalProcessingTimeMs = endTime - startTime;
-      const bedrockProcessingTimeMs = bedrockEndTime - bedrockStartTime;
-      
-      // Add metadata to the response
-      const result = response.data;
-      if (result.data) {
-        result.data.metadata = {
-          ...(result.data.metadata || {}),
-          model: modelId,
-          parameters: parameters,
-          processing_time_ms: totalProcessingTimeMs,
-          bedrock_processing_time_ms: bedrockProcessingTimeMs
+      // Add validation for the API endpoint
+      if (!this.apiEndpoint || this.apiEndpoint.trim() === '') {
+        console.error('BedrockApiService: API endpoint is not configured');
+        return {
+          success: false,
+          message: 'API endpoint not configured. Check your environment variables.'
         };
       }
       
-      return result;
+      // Validate input data
+      if (!candidate) {
+        console.error('BedrockApiService: Missing candidate data');
+        return {
+          success: false,
+          message: 'Missing candidate data'
+        };
+      }
+
+      if (!jobInfo) {
+        console.error('BedrockApiService: Missing job info data');
+        return {
+          success: false,
+          message: 'Missing job information'
+        };
+      }
+      
+      // eslint-disable-next-line no-unused-vars
+      const startTime = Date.now();
+      
+      // Default model if not provided
+      const modelId = options.modelId || config.bedrock.defaultModelId || 'meta.llama3-70b-instruct-v1:0';
+      const parameters = options.parameters || this.getDefaultParametersForModel(modelId);
+      
+      // Prepare the API request body - IMPORTANT: wrap in 'body' object to match API Gateway expectations
+      const requestBody = {
+        body: {
+          candidateData: candidate,
+          jobInfo: jobInfo,
+          modelId: modelId,
+          parameters: parameters
+        }
+      };
+      
+      console.log(`Calling API endpoint: ${this.apiEndpoint}`);
+      console.log('Request payload:', JSON.stringify(requestBody, null, 2));
+      
+      try {
+        // First try using Amplify API module (preferred method)
+        console.log('BedrockApiService: Trying API Gateway call via Amplify');
+        
+        // Check if Auth is available and user is authenticated
+        let authStatus = 'Unknown';
+        try {
+          const session = await Auth.currentSession();
+          authStatus = session ? 'Authenticated' : 'Not authenticated';
+        } catch (authError) {
+          authStatus = `Auth error: ${authError.message}`;
+        }
+        console.log('BedrockApiService: Auth status:', authStatus);
+        
+        const response = await API.post('bedrockAnalysisApi', '', {
+          body: requestBody,
+          headers: {
+            'Content-Type': 'application/json'
+            // Auth header is automatically added by Amplify
+          }
+        });
+        
+        console.log('BedrockApiService: API response received via Amplify:', response);
+        
+        return {
+          success: true,
+          data: response
+        };
+      } catch (amplifyError) {
+        // If Amplify API call fails, try direct axios call with explicit auth
+        console.warn('BedrockApiService: Amplify API call failed, falling back to direct axios:', amplifyError);
+        
+        if (amplifyError.message && amplifyError.message.includes('Network Error')) {
+          console.error('BedrockApiService: Network error detected:', amplifyError);
+          return {
+            success: false,
+            message: 'Network error. Please check your internet connection and try again.'
+          };
+        }
+        
+        // Get a fresh token for the direct call
+        try {
+          const session = await Auth.currentSession();
+          const token = session.getIdToken().getJwtToken();
+          
+          console.log('BedrockApiService: Making direct authenticated API call with axios');
+          console.log('BedrockApiService: Token available:', !!token);
+          
+          const response = await axios.post(`${this.apiEndpoint}`, requestBody, {
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${token}`
+            }
+          });
+          
+          console.log('BedrockApiService: API Response via axios:', response);
+          
+          if (response.status !== 200 || !response.data || !response.data.success) {
+            throw new Error(response.data?.message || 'Failed to analyze candidate profile');
+          }
+          
+          return {
+            success: true,
+            data: response.data
+          };
+        } catch (authError) {
+          console.error('BedrockApiService: Authentication error:', authError);
+          return {
+            success: false,
+            message: 'Authentication error. Please log in again.',
+            authError: true
+          };
+        }
+      }
     } catch (error) {
       console.error('BedrockApiService: Error analyzing candidate:', error);
+      
+      // Handle auth errors
+      if (error.response && (error.response.status === 401 || error.response.status === 403)) {
+        console.warn('BedrockApiService: Authentication error detected');
+        return {
+          success: false,
+          message: 'Authentication error. Please log in again.',
+          authError: true
+        };
+      }
+      
+      // Network errors
+      if (error.message === 'Network Error') {
+        console.error('BedrockApiService: Network error details:', {
+          endpoint: this.apiEndpoint,
+          error: error
+        });
+        
+        return {
+          success: false,
+          message: 'Network error. Please check your internet connection and try again.'
+        };
+      }
+      
       return {
         success: false,
         message: error.message || 'Failed to analyze candidate profile'
@@ -207,4 +256,8 @@ class BedrockApiService {
   }
 }
 
-export default new BedrockApiService(); 
+// Create service instance
+const bedrockApiService = new BedrockApiService();
+
+// Export service instance
+export default bedrockApiService; 

@@ -478,7 +478,7 @@ const ResultsDisplay = ({ results, jobInfo, skillGapAnalysis, isLoading }) => {
         <CandidateAnalysisModal
           open={analysisOpen}
           onClose={() => setAnalysisOpen(false)}
-          candidateData={selectedCandidate}
+          candidate={selectedCandidate}
           jobInfo={jobInfo}
         />
       )}

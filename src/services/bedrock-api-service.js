@@ -1,5 +1,6 @@
 import { Auth } from 'aws-amplify';
 import axios from 'axios';
+import { API_GATEWAY } from '../config/appConfig';
 
 /**
  * Service for AWS Bedrock analysis via API Gateway
@@ -7,8 +8,8 @@ import axios from 'axios';
  */
 class BedrockApiService {
   constructor() {
-    // Use environment variables for API configuration
-    this.apiEndpoint = process.env.REACT_APP_API_GATEWAY_URL || 'http://localhost:3001';
+    // Use environment variables or appConfig for API configuration
+    this.apiEndpoint = API_GATEWAY.bedrockAnalysisEndpoint || process.env.REACT_APP_BEDROCK_ANALYSIS_ENDPOINT || 'http://localhost:3001/analyze';
     this.bedrockPath = process.env.REACT_APP_BEDROCK_API_PATH || '/api/bedrock';
   }
 
@@ -96,15 +97,18 @@ class BedrockApiService {
       
       // Prepare the API request body
       const requestBody = {
-        modelId,
-        candidate,
-        jobInfo,
+        candidateData: candidate,
+        jobInfo: jobInfo,
         parameters
       };
       
+      // Make the API call to the Lambda function through API Gateway
+      console.log(`Calling API endpoint: ${this.apiEndpoint}`);
+      console.log('Request payload:', JSON.stringify(requestBody, null, 2));
+      
       // Make the direct API call to the analysis endpoint
       const bedrockStartTime = Date.now();
-      const response = await axios.post(`${this.apiEndpoint}${this.bedrockPath}/analyze`, requestBody, {
+      const response = await axios.post(this.apiEndpoint, requestBody, {
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`

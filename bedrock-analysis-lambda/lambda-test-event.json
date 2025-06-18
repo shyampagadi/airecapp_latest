@@ -1,0 +1,40 @@
+{
+  "body": {
+    "candidateData": {
+      "personal_info": {
+        "name": "Jane Doe"
+      },
+      "skills": {
+        "matching": ["JavaScript", "React", "Node.js"],
+        "missing": ["GraphQL", "AWS Lambda"],
+        "all": ["JavaScript", "React", "Node.js", "HTML", "CSS"]
+      },
+      "experience": {
+        "years": 5
+      },
+      "positions": ["Senior Frontend Developer"],
+      "education": [
+        {
+          "degree": "BS Computer Science",
+          "institution": "University of Technology",
+          "year": "2018"
+        }
+      ],
+      "scores": {
+        "overall": 85,
+        "skill_match": 80,
+        "experience_match": 90
+      }
+    },
+    "jobInfo": {
+      "job_title": "Frontend Developer",
+      "required_skills": ["JavaScript", "React", "GraphQL", "AWS Lambda"],
+      "required_experience": 3
+    },
+    "parameters": {
+      "temperature": 0.5,
+      "max_gen_len": 512,
+      "top_p": 0.9
+    }
+  }
+} 

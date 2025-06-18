@@ -1,0 +1,27 @@
+{
+  "body": "{\"candidateData\":{\"personal_info\":{\"name\":\"Jane Doe\"},\"skills\":{\"matching\":[\"JavaScript\",\"React\",\"Node.js\"],\"missing\":[\"GraphQL\",\"AWS Lambda\"],\"all\":[\"JavaScript\",\"React\",\"Node.js\",\"HTML\",\"CSS\"]},\"experience\":{\"years\":5},\"positions\":[\"Senior Frontend Developer\"],\"education\":[{\"degree\":\"BS Computer Science\",\"institution\":\"University of Technology\",\"year\":\"2018\"}],\"scores\":{\"overall\":85,\"skill_match\":80,\"experience_match\":90}},\"jobInfo\":{\"job_title\":\"Frontend Developer\",\"required_skills\":[\"JavaScript\",\"React\",\"GraphQL\",\"AWS Lambda\"],\"required_experience\":3}}",
+  "resource": "/analyze",
+  "path": "/analyze",
+  "httpMethod": "POST",
+  "headers": {
+    "Accept": "application/json",
+    "Content-Type": "application/json",
+    "Origin": "https://yourfrontendapp.com",
+    "Authorization": "YOUR_COGNITO_TOKEN_HERE"
+  },
+  "queryStringParameters": null,
+  "pathParameters": null,
+  "requestContext": {
+    "resourceId": "abc123",
+    "resourcePath": "/analyze",
+    "httpMethod": "POST",
+    "extendedRequestId": "example-id",
+    "requestTime": "09/May/2023:12:34:56 +0000",
+    "path": "/prod/analyze",
+    "accountId": "123456789012",
+    "stage": "prod",
+    "domainName": "api.example.com",
+    "apiId": "api123"
+  },
+  "isBase64Encoded": false
+} 

@@ -1,0 +1,10 @@
+{
+  "body": "{\"candidateData\":{\"personal_info\":{\"name\":\"John Doe\",\"email\":\"john@example.com\",\"phone_number\":\"+1234567890\",\"address\":\"123 Main St, City, State\",\"linkedin_url\":\"https://linkedin.com/in/johndoe\"},\"skills\":{\"matching\":[\"JavaScript\",\"React\",\"Node.js\"],\"missing\":[\"AWS\",\"Docker\"],\"all\":[\"JavaScript\",\"React\",\"Node.js\",\"HTML\",\"CSS\",\"MongoDB\"]},\"experience\":{\"years\":5,\"required\":3,\"difference\":2},\"positions\":[\"Senior Frontend Developer\",\"Web Developer\"],\"education\":[{\"degree\":\"B.S. Computer Science\",\"institution\":\"University of Technology\",\"year\":\"2018\"}],\"scores\":{\"overall\":85,\"skill_match\":70,\"experience_match\":100}},\"jobInfo\":{\"job_title\":\"Senior Frontend Developer\",\"required_skills\":[\"JavaScript\",\"React\",\"AWS\",\"Docker\",\"Node.js\"],\"required_experience\":3},\"parameters\":{\"max_gen_len\":512,\"temperature\":0.5,\"top_p\":0.9}}",
+  "requestContext": {
+    "http": {
+      "method": "POST",
+      "path": "/analyze"
+    }
+  },
+  "httpMethod": "POST"
+} 

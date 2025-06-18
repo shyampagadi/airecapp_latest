@@ -66,8 +66,9 @@ export const OPENSEARCH_CONFIG = {
 export const API_GATEWAY = {
   opensearchGatewayUrl: process.env.REACT_APP_OPENSEARCH_GATEWAY_API_URL,
   opensearchRestApiKey: process.env.REACT_APP_OPENSEARCH_REST_API_KEY,
-  jdSearchEndpoint: 'https://p1w63vjfu7.execute-api.us-east-1.amazonaws.com/dev/resumes',
- };
+  jdSearchEndpoint: process.env.REACT_APP_JD_SEARCH_ENDPOINT || 'https://p1w63vjfu7.execute-api.us-east-1.amazonaws.com/dev/resumes',
+  bedrockAnalysisEndpoint: process.env.REACT_APP_BEDROCK_ANALYSIS_ENDPOINT || 'https://qk0tuz5o5c.execute-api.us-east-1.amazonaws.com/dev/analyze'
+};
 
 // Resume File Extensions
 export const RESUME_FILE_EXTENSIONS = (process.env.REACT_APP_RESUME_FILE_EXTENSIONS || 'pdf,docx,doc,txt').split(',');

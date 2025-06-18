@@ -11,6 +11,7 @@ import Dashboard from './components/jd/Dashboard';
 import ProtectedRoute from './components/auth/ProtectedRoute';
 import ApiTest from './ApiTest';
 import LangchainBedrockExample from './components/jd/LangchainBedrockExample';
+import BedrockApiTest from './components/jd/BedrockApiTest';
 
 // Custom theme
 import theme from './theme';
@@ -18,8 +19,8 @@ import theme from './theme';
 // AWS Configuration - direct import
 import config from './config';
 
-// Hardcoded API Gateway URL
-const API_GATEWAY_URL = 'https://p1w63vjfu7.execute-api.us-east-1.amazonaws.com/dev/resumes';
+// Import API_GATEWAY config
+import { API_GATEWAY } from './config/appConfig';
 
 function App() {
   useEffect(() => {
@@ -40,8 +41,14 @@ function App() {
       }
     };
     
-    // Use hardcoded API URL instead of environment variable
-    console.log("Using hardcoded API Endpoint:", API_GATEWAY_URL);
+    // Get API endpoints from config
+    const jdSearchEndpoint = API_GATEWAY.jdSearchEndpoint;
+    const bedrockAnalysisEndpoint = API_GATEWAY.bedrockAnalysisEndpoint;
+    
+    console.log("Using API Endpoints:", {
+      jdSearchEndpoint,
+      bedrockAnalysisEndpoint
+    });
     
     // Use the config or hardcoded values
     const amplifyConfig = {
@@ -56,7 +63,7 @@ function App() {
         endpoints: [
           {
             name: 'jdSearchApi',
-            endpoint: API_GATEWAY_URL,
+            endpoint: jdSearchEndpoint,
             region: config.region || hardcodedConfig.region,
             custom_header: async () => {
               try {
@@ -73,6 +80,24 @@ function App() {
                 throw new Error('Authentication required');
               }
             }
+          },
+          {
+            name: 'bedrockAnalysisApi',
+            endpoint: bedrockAnalysisEndpoint,
+            region: config.region || hardcodedConfig.region,
+            custom_header: async () => {
+              try {
+                // Try to get a valid authentication token
+                const session = await Amplify.Auth.currentSession();
+                const token = session.getIdToken().getJwtToken();
+                return {
+                  Authorization: `Bearer ${token}`
+                };
+              } catch (error) {
+                console.warn('Failed to get auth token:', error);
+                throw new Error('Authentication required');
+              }
+            }
           }
         ]
       }
@@ -86,7 +111,8 @@ function App() {
       region: amplifyConfig.Auth.region,
       userPoolId: amplifyConfig.Auth.userPoolId,
       userPoolWebClientId: amplifyConfig.Auth.userPoolWebClientId,
-      apiEndpoint: amplifyConfig.API.endpoints[0].endpoint
+      jdSearchApi: amplifyConfig.API.endpoints[0].endpoint,
+      bedrockAnalysisApi: amplifyConfig.API.endpoints[1].endpoint
     });
   }, []);
 
@@ -132,6 +158,9 @@ function App() {
             
             {/* Test Route - Not Protected */}
             <Route path="/apitest" element={<ApiTest />} />
+            
+            {/* Bedrock API Test - Not Protected */}
+            <Route path="/bedrocktest" element={<BedrockApiTest />} />
             
             {/* Catch all - redirect to dashboard */}
             <Route path="*" element={<Navigate to="/dashboard" replace />} />
